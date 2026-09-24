@@ -1,0 +1,29 @@
+{
+  "colors": {
+    "primary": "#1668E8",
+    "primaryHover": "#0B5BD3",
+    "navy": "#0C1B3A",
+    "background": "#F7FAFF",
+    "surface": "#FFFFFF",
+    "border": "#E3EAF4",
+    "text": "#0F1E3A",
+    "muted": "#687A96",
+    "success": "#12A66A",
+    "warning": "#F5A623",
+    "danger": "#E5484D"
+  },
+  "radius": {
+    "sm": "10px",
+    "md": "16px",
+    "lg": "22px",
+    "xl": "28px",
+    "pill": "999px"
+  },
+  "shadow": {
+    "card": "0 8px 30px rgba(31, 68, 122, 0.08)"
+  },
+  "layout": {
+    "maxWidth": "1440px",
+    "sidebar": "264px"
+  }
+}

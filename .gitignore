@@ -1,0 +1,25 @@
+# dependencies
+/node_modules
+
+# Next.js build output
+/.next
+/out
+
+# test output
+/coverage
+
+# local deployment metadata
+/.vercel
+
+# local files
+.DS_Store
+*.log
+*.traineddata
+.env*
+!.env.example
+
+# misisipi
+/docs
+/.superpowers
+/agents
+.vercel

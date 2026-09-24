@@ -1,0 +1,31 @@
+{
+  "basePath": "/assets",
+  "assets": {
+    "logo": "/assets/logo.png",
+    "app-icon": "/assets/app-icon.png",
+    "icons-nav": "/assets/icons-nav.png",
+    "icons-category": "/assets/icons-category.png",
+    "avatar": "/assets/avatar.png",
+    "sidebar": "/assets/sidebar.png",
+    "topbar": "/assets/topbar.png",
+    "button-primary": "/assets/button-primary.png",
+    "button-secondary": "/assets/button-secondary.png",
+    "hero": "/assets/hero.png",
+    "card-tax": "/assets/card-tax.png",
+    "card-spending": "/assets/card-spending.png",
+    "card-group": "/assets/card-group.png",
+    "split-bill-form": "/assets/split-bill-form.png",
+    "split-bill-result": "/assets/split-bill-result.png",
+    "scan-upload": "/assets/scan-upload.png",
+    "receipt-sample": "/assets/receipt-sample.png",
+    "transaction-list": "/assets/transaction-list.png",
+    "illustration-group": "/assets/illustration-group.png",
+    "illustration-receipt": "/assets/illustration-receipt.png",
+    "illustration-calculator": "/assets/illustration-calculator.png",
+    "illustration-tax": "/assets/illustration-tax.png",
+    "illustration-wallet": "/assets/illustration-wallet.png",
+    "illustration-bank": "/assets/illustration-bank.png",
+    "empty-transactions": "/assets/empty-transactions.png",
+    "empty-error": "/assets/empty-error.png"
+  }
+}

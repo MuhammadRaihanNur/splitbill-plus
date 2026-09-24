@@ -1,0 +1,7 @@
+AGENTS*.md
+docs/superpowers/
+.superpowers/
+public/assets/
+splitbill-assets-separated/
+.next/
+node_modules/

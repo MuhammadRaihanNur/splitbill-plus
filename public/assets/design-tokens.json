@@ -1,0 +1,52 @@
+{
+  "colors": {
+    "brand": {
+      "50": "#EFF6FF",
+      "100": "#DBEAFE",
+      "500": "#1677FF",
+      "600": "#0B63E5",
+      "700": "#084CB4",
+      "900": "#071B3D"
+    },
+    "surface": {
+      "background": "#F7FAFF",
+      "card": "#FFFFFF",
+      "muted": "#F1F5F9",
+      "border": "#E2E8F0"
+    },
+    "text": {
+      "primary": "#0F172A",
+      "secondary": "#64748B",
+      "inverse": "#FFFFFF"
+    },
+    "success": "#16A36A",
+    "warning": "#F5B700",
+    "danger": "#DC2626"
+  },
+  "radius": {
+    "sm": "10px",
+    "md": "16px",
+    "lg": "24px",
+    "xl": "32px",
+    "pill": "999px"
+  },
+  "spacing": {
+    "pageDesktop": "32px",
+    "pageMobile": "16px",
+    "card": "20px",
+    "section": "24px"
+  },
+  "layout": {
+    "maxWidth": "1440px",
+    "sidebarWidth": "240px",
+    "contentMaxWidth": "1180px",
+    "mobileBreakpoint": "768px",
+    "tabletBreakpoint": "1024px"
+  },
+  "motion": {
+    "fast": "150ms",
+    "normal": "250ms",
+    "slow": "400ms",
+    "easing": "cubic-bezier(0.2, 0.8, 0.2, 1)"
+  }
+}
