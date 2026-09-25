@@ -21,5 +21,6 @@
 # misisipi
 /docs
 /.superpowers
+/.worktrees
 /agents
 .vercel
