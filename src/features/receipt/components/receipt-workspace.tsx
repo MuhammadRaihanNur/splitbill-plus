@@ -1,56 +1,59 @@
 "use client";
-import {
-  Camera,
-  FileImage,
-  LoaderCircle,
-  Plus,
-  ScanLine,
-  Trash2,
-} from "lucide-react";
+
+import { Camera, FileImage, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+
 import { inputClass } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast-provider";
 import { validateReceiptFile } from "@/features/receipt/file-validation";
-import { parseReceiptText } from "@/features/receipt/parser";
 import type { ParsedReceiptItem } from "@/features/receipt/types";
+import type { ReceiptScannerDependencies } from "@/features/receipt/use-receipt-scanner";
+import { useReceiptScanner } from "@/features/receipt/use-receipt-scanner";
 import {
   draftRepository,
   settingsRepository,
 } from "@/features/storage/repositories";
+import { formatRupiah } from "@/lib/formatters";
+
+import { ReceiptImageEditor } from "./receipt-image-editor";
+import { ReceiptProgress } from "./receipt-progress";
 
 type EditableItem = ParsedReceiptItem & { id: string; selected: boolean };
-export function ReceiptWorkspace() {
+
+export function ReceiptWorkspace({
+  scannerDependencies,
+}: {
+  scannerDependencies?: ReceiptScannerDependencies;
+} = {}) {
   const router = useRouter();
   const toast = useToast();
-  const controller = useRef<AbortController | null>(null);
-  const [file, setFile] = useState<File>();
-  const [preview, setPreview] = useState("");
+  const scanner = useReceiptScanner(scannerDependencies);
   const [items, setItems] = useState<EditableItem[]>([]);
-  const [progress, setProgress] = useState(0);
-  const [working, setWorking] = useState(false);
-  const [error, setError] = useState("");
-  useEffect(
-    () => () => {
-      if (preview) URL.revokeObjectURL(preview);
-      controller.current?.abort();
-    },
-    [preview],
-  );
-  function choose(next?: File) {
+  const [uploadError, setUploadError] = useState("");
+
+  useEffect(() => {
+    if (!scanner.selected) return;
+    setItems(
+      scanner.selected.interpreted.items.map((item, index) => ({
+        ...item,
+        id: `${scanner.selected?.candidate.id}-${index}`,
+        selected: true,
+      })),
+    );
+  }, [scanner.selected]);
+
+  async function choose(next?: File) {
     if (!next) return;
     const result = validateReceiptFile(next);
     if (!result.ok) {
-      setError(result.message);
+      setUploadError(result.message);
       return;
     }
-    if (preview) URL.revokeObjectURL(preview);
-    setFile(next);
-    setPreview(URL.createObjectURL(next));
-    setError("");
-    setProgress(0);
+    setUploadError("");
+    await scanner.selectFile(next);
   }
+
   function addItem(item: Partial<ParsedReceiptItem> = {}) {
     setItems((current) => [
       ...current,
@@ -59,48 +62,38 @@ export function ReceiptWorkspace() {
         name: item.name ?? "",
         quantity: item.quantity ?? 1,
         unitPrice: item.unitPrice ?? 0,
+        confidence: 1,
+        source: "manual",
         selected: true,
       },
     ]);
   }
-  async function scan() {
-    if (!file) return;
-    controller.current?.abort();
-    const aborter = new AbortController();
-    controller.current = aborter;
-    setWorking(true);
-    setError("");
-    try {
-      const { recognizeReceipt } =
-        await import("@/features/receipt/ocr-adapter");
-      const text = await recognizeReceipt(file, {
-        signal: aborter.signal,
-        onProgress: setProgress,
-      });
-      const parsed = parseReceiptText(text);
-      setItems(
-        parsed.map((item) => ({
-          ...item,
-          id: crypto.randomUUID(),
-          selected: true,
-        })),
-      );
-      if (!parsed.length)
-        setError(
-          "Item belum terbaca. Tambahkan atau koreksi item secara manual.",
-        );
-    } catch (cause) {
-      if ((cause as Error).name !== "AbortError")
-        setError(
-          "Scan gagal. Foto tetap tersimpan dan item bisa diisi manual.",
-        );
-    } finally {
-      setWorking(false);
-    }
+
+  function updateItem(id: string, changes: Partial<ParsedReceiptItem>) {
+    setItems((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              ...changes,
+              source: "manual",
+              confidence: 1,
+              estimated: false,
+            }
+          : item,
+      ),
+    );
   }
+
   async function handoff() {
     const chosen = items.filter(
-      (item) => item.selected && item.name.trim() && item.unitPrice > 0,
+      (item) =>
+        item.selected &&
+        item.name.trim() &&
+        Number.isSafeInteger(item.quantity) &&
+        item.quantity > 0 &&
+        Number.isSafeInteger(item.unitPrice) &&
+        item.unitPrice > 0,
     );
     if (!chosen.length) {
       toast.error("Pilih minimal satu item valid");
@@ -109,7 +102,7 @@ export function ReceiptWorkspace() {
     const settings = await settingsRepository.get();
     await draftRepository.save({
       id: "active-split",
-      title: file?.name.replace(/\.[^.]+$/, "") || "Hasil scan struk",
+      title: scanner.fileName.replace(/\.[^.]+$/, "") || "Hasil scan struk",
       mode: "item",
       subtotal: chosen.reduce(
         (sum, item) => sum + item.unitPrice * item.quantity,
@@ -132,91 +125,104 @@ export function ReceiptWorkspace() {
     });
     router.push("/split-bill");
   }
+
+  const selectedReceipt = scanner.selected?.interpreted;
+  const itemTotal = items.reduce(
+    (sum, item) => sum + item.unitPrice * item.quantity,
+    0,
+  );
+  const difference = (selectedReceipt?.subtotal ?? itemTotal) - itemTotal;
+  const error = uploadError || scanner.error;
+
   return (
     <div className="space-y-6">
       <header>
         <p className="text-sm font-bold text-[var(--brand-500)]">
-          OCR + editor manual
+          OCR lokal + editor manual
         </p>
         <h1 className="text-3xl font-black">Scan Struk</h1>
         <p className="mt-2 text-[var(--text-secondary)]">
-          Unggah foto, periksa hasil, lalu lanjutkan ke pembagian per item.
+          Foto diproses di perangkat ini. Atur area, periksa semua harga, lalu lanjutkan.
         </p>
       </header>
-      <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr]">
-        <section className="rounded-[var(--radius-lg)] bg-[var(--surface-card)] p-5 shadow-[var(--shadow-card)]">
-          <label className="grid min-h-48 cursor-pointer place-items-center rounded-2xl border-2 border-dashed border-[var(--brand-100)] bg-[var(--brand-50)] p-6 text-center">
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="sr-only"
-              onChange={(e) => choose(e.target.files?.[0])}
-            />
-            <span>
-              <FileImage
-                className="mx-auto text-[var(--brand-500)]"
-                size={38}
+
+      <div className="grid gap-6 xl:grid-cols-[.9fr_1.1fr]">
+        <section className="space-y-4 rounded-[var(--radius-lg)] bg-[var(--surface-card)] p-5 shadow-[var(--shadow-card)]">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid min-h-32 cursor-pointer place-items-center rounded-2xl border-2 border-dashed border-[var(--brand-100)] bg-[var(--brand-50)] p-4 text-center">
+              <input
+                aria-label="Pilih foto struk"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                onChange={(event) => void choose(event.target.files?.[0])}
               />
-              <strong className="mt-3 block">Pilih foto struk</strong>
-              <small>JPG, PNG, WebP · maks. 10 MB</small>
-            </span>
-          </label>
-          <label className="mt-3 flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border font-bold">
-            <Camera size={18} /> Ambil dari kamera
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="sr-only"
-              onChange={(e) => choose(e.target.files?.[0])}
-            />
-          </label>
-          {preview ? (
-            <Image
-              src={preview}
-              alt="Pratinjau struk terpilih"
-              width={720}
-              height={480}
-              unoptimized
-              className="mt-4 max-h-80 w-full rounded-xl object-contain"
+              <span>
+                <FileImage className="mx-auto text-[var(--brand-500)]" size={30} />
+                <strong className="mt-2 block">Pilih foto struk</strong>
+                <small>JPG, PNG, WebP · maks. 10 MB</small>
+              </span>
+            </label>
+            <label className="grid min-h-32 cursor-pointer place-items-center rounded-2xl border border-[var(--surface-border)] p-4 text-center font-bold">
+              <input
+                aria-label="Ambil foto struk dari kamera"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="sr-only"
+                onChange={(event) => void choose(event.target.files?.[0])}
+              />
+              <span>
+                <Camera className="mx-auto text-[var(--brand-500)]" size={30} />
+                <span className="mt-2 block">Ambil dari kamera</span>
+              </span>
+            </label>
+          </div>
+
+          {scanner.status === "processing" ? (
+            <ReceiptProgress progress={scanner.progress} onCancel={scanner.cancel} />
+          ) : null}
+
+          {scanner.previewUrl &&
+          scanner.polygon &&
+          scanner.originalPolygon &&
+          scanner.status !== "processing" ? (
+            <ReceiptImageEditor
+              previewUrl={scanner.previewUrl}
+              imageSize={scanner.imageSize}
+              polygon={scanner.polygon}
+              originalPolygon={scanner.originalPolygon}
+              rotation={scanner.rotation}
+              onPolygonChange={scanner.setPolygon}
+              onRotate={scanner.setRotation}
+              onReset={scanner.resetPolygon}
+              onAutoCrop={() => void scanner.redetect()}
+              onConfirm={() => void scanner.scan()}
             />
           ) : null}
-          <button
-            type="button"
-            disabled={!file || working}
-            onClick={() => void scan()}
-            className="mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-500)] font-black text-white disabled:opacity-50"
-          >
-            {working ? (
-              <LoaderCircle className="animate-spin" size={18} />
-            ) : (
-              <ScanLine size={18} />
-            )}{" "}
-            {working
-              ? `Memindai ${Math.round(progress * 100)}%`
-              : "Scan sekarang"}
-          </button>
-          {working ? (
+
+          {scanner.status === "review" ? (
             <button
               type="button"
-              onClick={() => controller.current?.abort()}
-              className="mt-2 min-h-11 w-full rounded-xl border font-bold"
+              onClick={scanner.edit}
+              className="min-h-11 w-full rounded-xl border font-bold"
             >
-              Batalkan scan
+              Atur ulang area dan scan lagi
             </button>
           ) : null}
           {error ? (
-            <p role="alert" className="mt-3 text-sm text-[var(--danger)]">
+            <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-[var(--danger)]">
               {error}
             </p>
           ) : null}
         </section>
+
         <section className="rounded-[var(--radius-lg)] bg-[var(--surface-card)] p-5 shadow-[var(--shadow-card)]">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-black">Item struk</h2>
               <p className="text-sm text-[var(--text-secondary)]">
-                Editor selalu bisa dipakai, meski OCR gagal.
+                Nilai estimasi dan keyakinan rendah wajib kamu periksa.
               </p>
             </div>
             <button
@@ -227,6 +233,36 @@ export function ReceiptWorkspace() {
               <Plus size={17} /> Tambah
             </button>
           </div>
+
+          {scanner.alternatives.length > 1 ? (
+            <div className="mt-4 flex flex-wrap gap-2" aria-label="Alternatif hasil scan">
+              {scanner.alternatives.map((alternative, index) => (
+                <button
+                  key={alternative.candidate.id}
+                  type="button"
+                  aria-pressed={scanner.selected?.candidate.id === alternative.candidate.id}
+                  onClick={() => scanner.selectCandidate(alternative.candidate.id)}
+                  className="min-h-10 rounded-xl border px-3 text-sm font-bold aria-pressed:border-[var(--brand-500)] aria-pressed:bg-[var(--brand-50)] aria-pressed:text-[var(--brand-600)]"
+                >
+                  Hasil {index + 1}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {selectedReceipt ? (
+            <div className="mt-4 grid gap-2 rounded-2xl bg-[var(--surface-muted)] p-4 sm:grid-cols-3">
+              <Metric label="Subtotal struk" value={formatRupiah(selectedReceipt.subtotal ?? 0)} />
+              <Metric label="Total item" value={formatRupiah(itemTotal)} />
+              <Metric label="Selisih" value={formatRupiah(Math.abs(difference))} />
+              {selectedReceipt.issues.map((issue) => (
+                <p key={`${issue.code}-${issue.message}`} className="text-sm text-[var(--warning)] sm:col-span-3">
+                  {issue.message}
+                </p>
+              ))}
+            </div>
+          ) : null}
+
           <div className="mt-4 space-y-3">
             {items.length ? (
               items.map((item) => (
@@ -238,12 +274,10 @@ export function ReceiptWorkspace() {
                     aria-label={`Pilih ${item.name || "item"}`}
                     type="checkbox"
                     checked={item.selected}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       setItems((rows) =>
                         rows.map((row) =>
-                          row.id === item.id
-                            ? { ...row, selected: e.target.checked }
-                            : row,
+                          row.id === item.id ? { ...row, selected: event.target.checked } : row,
                         ),
                       )
                     }
@@ -254,19 +288,15 @@ export function ReceiptWorkspace() {
                       className={inputClass}
                       placeholder="Nama item"
                       value={item.name}
-                      onChange={(e) =>
-                        setItems((rows) =>
-                          rows.map((row) =>
-                            row.id === item.id
-                              ? { ...row, name: e.target.value }
-                              : row,
-                          ),
-                        )
-                      }
+                      onChange={(event) => updateItem(item.id, { name: event.target.value })}
                     />
                     {item.estimated ? (
                       <small className="mt-1 block font-semibold text-[var(--warning)]">
-                        Estimasi dari selisih subtotal — mohon periksa
+                        Estimasi — mohon periksa
+                      </small>
+                    ) : item.confidence !== undefined && item.confidence < 0.6 ? (
+                      <small className="mt-1 block font-semibold text-[var(--warning)]">
+                        Keyakinan rendah — mohon periksa
                       </small>
                     ) : null}
                   </div>
@@ -276,44 +306,23 @@ export function ReceiptWorkspace() {
                     type="number"
                     min="1"
                     value={item.quantity}
-                    onChange={(e) =>
-                      setItems((rows) =>
-                        rows.map((row) =>
-                          row.id === item.id
-                            ? { ...row, quantity: Number(e.target.value) }
-                            : row,
-                        ),
-                      )
-                    }
+                    onChange={(event) => updateItem(item.id, { quantity: Number(event.target.value) })}
                   />
                   <input
                     aria-label={`Harga ${item.name || "item"}`}
                     className={inputClass}
                     inputMode="numeric"
                     value={item.unitPrice || ""}
-                    onChange={(e) =>
-                      setItems((rows) =>
-                        rows.map((row) =>
-                          row.id === item.id
-                            ? {
-                                ...row,
-                                unitPrice: Number(
-                                  e.target.value.replace(/\D/g, ""),
-                                ),
-                              }
-                            : row,
-                        ),
-                      )
+                    onChange={(event) =>
+                      updateItem(item.id, {
+                        unitPrice: Number(event.target.value.replace(/\D/g, "")),
+                      })
                     }
                   />
                   <button
                     aria-label={`Hapus ${item.name || "item"}`}
                     type="button"
-                    onClick={() =>
-                      setItems((rows) =>
-                        rows.filter((row) => row.id !== item.id),
-                      )
-                    }
+                    onClick={() => setItems((rows) => rows.filter((row) => row.id !== item.id))}
                   >
                     <Trash2 size={18} />
                   </button>
@@ -328,13 +337,22 @@ export function ReceiptWorkspace() {
           <button
             type="button"
             onClick={() => void handoff()}
-            disabled={!items.some((x) => x.selected)}
+            disabled={!items.some((item) => item.selected)}
             className="mt-5 min-h-12 w-full rounded-xl bg-[var(--brand-500)] font-black text-white disabled:opacity-50"
           >
             Lanjut ke Split per Item
           </button>
         </section>
       </div>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-bold text-[var(--text-secondary)]">{label}</p>
+      <strong className="mt-1 block">{value}</strong>
     </div>
   );
 }
