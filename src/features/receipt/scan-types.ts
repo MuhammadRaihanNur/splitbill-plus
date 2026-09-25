@@ -59,9 +59,11 @@ export interface ReceiptIssue {
 
 export interface InterpretedReceipt {
   items: ParsedReceiptItem[];
+  unresolvedItems?: string[];
   subtotal?: number;
   tax?: number;
   serviceCharge?: number;
+  discount?: number;
   grandTotal?: number;
   confidence: number;
   issues: ReceiptIssue[];

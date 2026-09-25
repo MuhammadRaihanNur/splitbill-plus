@@ -1,5 +1,6 @@
 import type { ParsedReceiptItem } from "@/features/receipt/types";
 import { normalizeMoneyToken } from "@/features/receipt/money-normalizer";
+import { reconcileReceipt } from "@/features/receipt/receipt-reconciler";
 
 const ignoredName =
   /^(?:sub\s*total|grand\s+total|total|qris|tunai|cash|pajak|tax|service|payment|pembayaran|kasir|penjualan|instagram|contact|transfer|powered)\b/i;
@@ -57,6 +58,8 @@ function validItem(
 export function parseReceiptText(text: string): ParsedReceiptItem[] {
   const items: ParsedReceiptItem[] = [];
   let nameLines: string[] = [];
+  const unresolvedItems: string[] = [];
+  let detectedSubtotal: number | undefined;
 
   for (const rawLine of text.split(/\r?\n/)) {
     const line = normalizeNumberSpacing(rawLine.trim());
@@ -64,22 +67,9 @@ export function parseReceiptText(text: string): ParsedReceiptItem[] {
 
     const subtotal = line.match(subtotalPattern);
     if (subtotal) {
-      const expectedTotal = parseMoney(subtotal[1]);
-      const detectedTotal = items.reduce(
-        (sum, item) => sum + item.quantity * item.unitPrice,
-        0,
-      );
-      const difference = expectedTotal - detectedTotal;
-      if (
-        nameLines.length > 0 &&
-        nameLines.length <= 2 &&
-        Number.isSafeInteger(difference) &&
-        difference > 0
-      ) {
-        const name = nameLines.map(cleanNameLine).filter(Boolean).join(" ");
-        const item = validItem(name, 1, difference, true);
-        if (item) items.push(item);
-      }
+      detectedSubtotal = parseMoney(subtotal[1]);
+      const name = nameLines.map(cleanNameLine).filter(Boolean).join(" ");
+      if (name) unresolvedItems.push(name);
       nameLines = [];
       continue;
     }
@@ -124,5 +114,18 @@ export function parseReceiptText(text: string): ParsedReceiptItem[] {
     }
   }
 
-  return items;
+  if (detectedSubtotal === undefined) return items;
+  return reconcileReceipt({
+    items,
+    unresolvedItems,
+    subtotal: detectedSubtotal,
+    confidence: 1,
+    issues: [],
+    sourceCandidateId: "plain-text",
+  }).items.map((item) => ({
+    name: item.name,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    ...(item.estimated ? { estimated: true } : {}),
+  }));
 }

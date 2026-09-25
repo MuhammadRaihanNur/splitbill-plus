@@ -85,13 +85,21 @@ export function interpretReceipt(candidate: OcrCandidate): InterpretedReceipt {
   let subtotal: number | undefined;
   let tax: number | undefined;
   let serviceCharge: number | undefined;
+  let discount: number | undefined;
   let grandTotal: number | undefined;
+  const unresolvedItems: string[] = [];
 
   for (const row of rows) {
     const text = row.text.replace(/(\d)[.,]\s+(?=[0-9IlOS]{3}\b)/g, "$1.");
     const lower = text.toLowerCase();
     const classifiedAmount = lastMoney(text);
     if (/\bsub\s*total\b/i.test(text)) {
+      const unresolvedName = pendingNames
+        .slice(-2)
+        .map((pending) => cleanName(pending.text))
+        .filter(Boolean)
+        .join(" ");
+      if (unresolvedName) unresolvedItems.push(unresolvedName);
       subtotal = classifiedAmount;
       pendingNames.length = 0;
       continue;
@@ -109,7 +117,11 @@ export function interpretReceipt(candidate: OcrCandidate): InterpretedReceipt {
       serviceCharge = classifiedAmount;
       continue;
     }
-    if (/^(?:tip|discount|diskon|cash|tunai|qris|payment|pembayaran)\b/i.test(text)) {
+    if (/^(?:discount|diskon)\b/i.test(text)) {
+      discount = classifiedAmount === undefined ? undefined : Math.abs(classifiedAmount);
+      continue;
+    }
+    if (/^(?:tip|cash|tunai|qris|payment|pembayaran)\b/i.test(text)) {
       continue;
     }
     if (/[|\\:]\s*\d+\s*$/.test(text) && /^[A-Za-zÀ-ÿ]/.test(text)) {
@@ -209,9 +221,11 @@ export function interpretReceipt(candidate: OcrCandidate): InterpretedReceipt {
 
   return {
     items,
+    unresolvedItems,
     subtotal,
     tax,
     serviceCharge,
+    discount,
     grandTotal,
     confidence,
     issues,
