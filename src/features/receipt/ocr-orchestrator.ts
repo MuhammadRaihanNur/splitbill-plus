@@ -87,15 +87,19 @@ function recognizeWithAbort(
   return new Promise((resolve, reject) => {
     const abort = () => reject(abortError());
     signal.addEventListener("abort", abort, { once: true });
-    recognizer.recognize(image, pass).then(resolve, reject).finally(() => {
-      signal.removeEventListener("abort", abort);
-    });
+    recognizer
+      .recognize(image, pass)
+      .then(resolve, reject)
+      .finally(() => {
+        signal.removeEventListener("abort", abort);
+      });
   });
 }
 
-function asCanvas(
-  rendered: HTMLCanvasElement | ImageBitmap,
-): { image: HTMLCanvasElement; cleanup: () => void } {
+function asCanvas(rendered: HTMLCanvasElement | ImageBitmap): {
+  image: HTMLCanvasElement;
+  cleanup: () => void;
+} {
   if (rendered instanceof HTMLCanvasElement) {
     return { image: rendered, cleanup: () => undefined };
   }
@@ -115,7 +119,10 @@ function retainBest(
   retained: ScoredOcrCandidate[],
   next: ScoredOcrCandidate,
 ): ScoredOcrCandidate[] {
-  const fingerprint = next.candidate.rawText.toLowerCase().replace(/\s+/g, " ").trim();
+  const fingerprint = next.candidate.rawText
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
   const unique = retained.filter(
     (entry) =>
       entry.candidate.rawText.toLowerCase().replace(/\s+/g, " ").trim() !==
@@ -149,8 +156,11 @@ export async function runAdaptiveOcr(
         totalPasses: passes.length,
         elapsedMs: performance.now() - startedAt,
       });
-      const rendered = await (callbacks.render?.(input.source, pass, callbacks.signal) ??
-        renderVariant(input.source, pass, callbacks.signal));
+      const rendered = await (callbacks.render?.(
+        input.source,
+        pass,
+        callbacks.signal,
+      ) ?? renderVariant(input.source, pass, callbacks.signal));
       const normalized = asCanvas(rendered);
       try {
         callbacks.onProgress?.({

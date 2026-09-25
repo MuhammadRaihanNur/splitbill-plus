@@ -23,10 +23,15 @@ function overlapsVertically(first: BoxedWord, second: BoxedWord): boolean {
 }
 
 function buildRow(words: BoxedWord[]): LayoutRow {
-  const sorted = [...words].sort((first, second) => first.bbox.x0 - second.bbox.x0);
+  const sorted = [...words].sort(
+    (first, second) => first.bbox.x0 - second.bbox.x0,
+  );
   return {
     words: sorted,
-    text: sorted.map((word) => word.text.trim()).filter(Boolean).join(" "),
+    text: sorted
+      .map((word) => word.text.trim())
+      .filter(Boolean)
+      .join(" "),
     confidence: Math.min(...sorted.map((word) => word.confidence)),
     bbox: {
       x0: Math.min(...sorted.map((word) => word.bbox.x0)),
@@ -47,5 +52,7 @@ export function groupWordsIntoRows(words: OcrLine[]): LayoutRow[] {
     if (group) group.push(word);
     else groups.push([word]);
   }
-  return groups.map(buildRow).sort((first, second) => first.bbox.y0 - second.bbox.y0);
+  return groups
+    .map(buildRow)
+    .sort((first, second) => first.bbox.y0 - second.bbox.y0);
 }

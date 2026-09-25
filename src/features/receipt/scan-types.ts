@@ -50,10 +50,7 @@ export interface OcrCandidate {
 
 export interface ReceiptIssue {
   code:
-    | "low-confidence"
-    | "total-mismatch"
-    | "ambiguous-gap"
-    | "missing-subtotal";
+    "low-confidence" | "total-mismatch" | "ambiguous-gap" | "missing-subtotal";
   message: string;
 }
 

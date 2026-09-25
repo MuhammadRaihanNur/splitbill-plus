@@ -14,12 +14,16 @@ interface TextRow {
 }
 
 const numericToken = String.raw`(?:Rp\s*)?-?(?=[0-9IlOS.,\s]*[0-9])[0-9IlOS]+(?:[.,]\s*[0-9IlOS]+)*`;
-const ignoredItem = /^(?:sub\s*total|grand\s+total|total|tax|pajak|service|tip|discount|diskon|cash|tunai|qris|payment|pembayaran)\b/i;
+const ignoredItem =
+  /^(?:sub\s*total|grand\s+total|total|tax|pajak|service|tip|discount|diskon|cash|tunai|qris|payment|pembayaran)\b/i;
 
 function rowsFromCandidate(candidate: OcrCandidate): TextRow[] {
   const grouped = groupWordsIntoRows(candidate.lines);
   if (grouped.length > 0) {
-    return grouped.map((row) => ({ text: row.text, confidence: row.confidence }));
+    return grouped.map((row) => ({
+      text: row.text,
+      confidence: row.confidence,
+    }));
   }
   const confidence = Math.min(1, Math.max(0, candidate.engineConfidence / 100));
   return candidate.rawText
@@ -73,7 +77,8 @@ function addUnique(items: ParsedReceiptItem[], item: ParsedReceiptItem): void {
   const key = `${item.name.toLowerCase().replace(/\s+/g, " ")}|${item.quantity}|${item.unitPrice}`;
   const duplicate = items.some(
     (existing) =>
-      `${existing.name.toLowerCase().replace(/\s+/g, " ")}|${existing.quantity}|${existing.unitPrice}` === key,
+      `${existing.name.toLowerCase().replace(/\s+/g, " ")}|${existing.quantity}|${existing.unitPrice}` ===
+      key,
   );
   if (!duplicate) items.push(item);
 }
@@ -94,12 +99,19 @@ export function interpretReceipt(candidate: OcrCandidate): InterpretedReceipt {
     const lower = text.toLowerCase();
     const classifiedAmount = lastMoney(text);
     if (/\bsub\s*total\b/i.test(text)) {
-      const unresolvedName = pendingNames
-        .slice(-2)
+      const pending = pendingNames
         .map((pending) => cleanName(pending.text))
-        .filter(Boolean)
-        .join(" ");
-      if (unresolvedName) unresolvedItems.push(unresolvedName);
+        .filter(Boolean);
+      const lastPending = pending.at(-1) ?? "";
+      const isVariant =
+        /^(?:ice|hot|regular|large|small|medium|besar|kecil)(?:\s+\w+)*$/i.test(
+          lastPending,
+        );
+      if (pending.length === 2 && isVariant) {
+        unresolvedItems.push(pending.join(" "));
+      } else {
+        unresolvedItems.push(...pending);
+      }
       subtotal = classifiedAmount;
       pendingNames.length = 0;
       continue;
@@ -118,7 +130,8 @@ export function interpretReceipt(candidate: OcrCandidate): InterpretedReceipt {
       continue;
     }
     if (/^(?:discount|diskon)\b/i.test(text)) {
-      discount = classifiedAmount === undefined ? undefined : Math.abs(classifiedAmount);
+      discount =
+        classifiedAmount === undefined ? undefined : Math.abs(classifiedAmount);
       continue;
     }
     if (/^(?:tip|cash|tunai|qris|payment|pembayaran)\b/i.test(text)) {
@@ -130,7 +143,10 @@ export function interpretReceipt(candidate: OcrCandidate): InterpretedReceipt {
     }
 
     const detail = text.match(
-      new RegExp(`(${numericToken})\\s*[x×]\\s*(\\d+)\\s+(${numericToken})\\s*$`, "i"),
+      new RegExp(
+        `(${numericToken})\\s*[x×]\\s*(\\d+)\\s+(${numericToken})\\s*$`,
+        "i",
+      ),
     );
     if (detail) {
       const scannedUnit = normalizeMoneyToken(detail[1], true);
@@ -155,7 +171,10 @@ export function interpretReceipt(candidate: OcrCandidate): InterpretedReceipt {
     }
 
     const aligned = text.match(
-      new RegExp(`^(.+?)\\s+(\\d+)\\s+(${numericToken})\\s+(${numericToken})\\s*$`, "i"),
+      new RegExp(
+        `^(.+?)\\s+(\\d+)\\s+(${numericToken})\\s+(${numericToken})\\s*$`,
+        "i",
+      ),
     );
     if (aligned) {
       const quantity = Number(aligned[2]);
@@ -163,7 +182,10 @@ export function interpretReceipt(candidate: OcrCandidate): InterpretedReceipt {
       const total = normalizeMoneyToken(aligned[4], true);
       if (unit !== undefined && total !== undefined) {
         const derived = total / quantity;
-        const unitPrice = unit * quantity === total || !Number.isSafeInteger(derived) ? unit : derived;
+        const unitPrice =
+          unit * quantity === total || !Number.isSafeInteger(derived)
+            ? unit
+            : derived;
         const item = safeItem(aligned[1], quantity, unitPrice, row.confidence);
         if (item) addUnique(items, item);
       }
@@ -177,11 +199,14 @@ export function interpretReceipt(candidate: OcrCandidate): InterpretedReceipt {
     const quantityLast = text.match(
       new RegExp(`^(.+?)\\s+(\\d+)\\s+(${numericToken})\\s*$`, "i"),
     );
-    const simple = text.match(new RegExp(`^(.+?)\\s+(${numericToken})\\s*$`, "i"));
+    const simple = text.match(
+      new RegExp(`^(.+?)\\s+(${numericToken})\\s*$`, "i"),
+    );
     if (quantityFirst || quantityLast || simple) {
       const name = quantityFirst?.[2] ?? quantityLast?.[1] ?? simple?.[1] ?? "";
       const quantity = Number(quantityFirst?.[1] ?? quantityLast?.[2] ?? 1);
-      const priceToken = quantityFirst?.[3] ?? quantityLast?.[3] ?? simple?.[2] ?? "";
+      const priceToken =
+        quantityFirst?.[3] ?? quantityLast?.[3] ?? simple?.[2] ?? "";
       const price = normalizeMoneyToken(priceToken, true);
       if (price !== undefined) {
         const item = safeItem(name, quantity, price, row.confidence);
@@ -197,7 +222,10 @@ export function interpretReceipt(candidate: OcrCandidate): InterpretedReceipt {
   }
 
   if (items.length === 0) {
-    const fallbackConfidence = Math.min(1, Math.max(0, candidate.engineConfidence / 100));
+    const fallbackConfidence = Math.min(
+      1,
+      Math.max(0, candidate.engineConfidence / 100),
+    );
     for (const fallback of parseReceiptText(candidate.rawText)) {
       addUnique(items, {
         ...fallback,
@@ -209,14 +237,21 @@ export function interpretReceipt(candidate: OcrCandidate): InterpretedReceipt {
 
   const confidence =
     items.length > 0
-      ? items.reduce((sum, item) => sum + (item.confidence ?? 0), 0) / items.length
+      ? items.reduce((sum, item) => sum + (item.confidence ?? 0), 0) /
+        items.length
       : Math.min(1, Math.max(0, candidate.engineConfidence / 100));
   const issues: ReceiptIssue[] = [];
   if (confidence < 0.65) {
-    issues.push({ code: "low-confidence", message: "Sebagian teks struk kurang jelas." });
+    issues.push({
+      code: "low-confidence",
+      message: "Sebagian teks struk kurang jelas.",
+    });
   }
   if (subtotal === undefined) {
-    issues.push({ code: "missing-subtotal", message: "Subtotal belum terbaca." });
+    issues.push({
+      code: "missing-subtotal",
+      message: "Subtotal belum terbaca.",
+    });
   }
 
   return {

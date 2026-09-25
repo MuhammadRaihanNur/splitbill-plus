@@ -20,7 +20,9 @@ async function requireFile(relativePath) {
   try {
     if (!(await stat(absolutePath)).isFile()) throw new Error("not a file");
   } catch (error) {
-    throw new Error(`OCR_ASSET_SOURCE_MISSING: ${relativePath}`, { cause: error });
+    throw new Error(`OCR_ASSET_SOURCE_MISSING: ${relativePath}`, {
+      cause: error,
+    });
   }
   return absolutePath;
 }
@@ -38,7 +40,9 @@ const coreFiles = (await readdir(coreDirectory)).filter((name) =>
   /^tesseract-core.*\.(?:js|wasm|wasm\.js)$/.test(name),
 );
 if (coreFiles.length === 0) {
-  throw new Error("OCR_ASSET_SOURCE_MISSING: node_modules/tesseract.js-core/tesseract-core*");
+  throw new Error(
+    "OCR_ASSET_SOURCE_MISSING: node_modules/tesseract.js-core/tesseract-core*",
+  );
 }
 for (const file of coreFiles) {
   await cp(
@@ -47,4 +51,6 @@ for (const file of coreFiles) {
   );
 }
 
-console.log(`OCR runtime synchronized: ${assets.length + coreFiles.length} files`);
+console.log(
+  `OCR runtime synchronized: ${assets.length + coreFiles.length} files`,
+);

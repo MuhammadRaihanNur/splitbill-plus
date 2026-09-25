@@ -2,6 +2,7 @@ AGENTS*.md
 docs/superpowers/
 .superpowers/
 public/assets/
+public/ocr/runtime/
 splitbill-assets-separated/
 .next/
 node_modules/

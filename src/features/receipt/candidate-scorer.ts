@@ -8,7 +8,8 @@ function itemTotal(receipt: InterpretedReceipt): number {
 }
 
 export function hasReconciledSubtotal(receipt: InterpretedReceipt): boolean {
-  if (receipt.subtotal === undefined || receipt.items.length === 0) return false;
+  if (receipt.subtotal === undefined || receipt.items.length === 0)
+    return false;
   return itemTotal(receipt) === receipt.subtotal;
 }
 
@@ -16,7 +17,10 @@ export function scoreCandidate(
   candidate: OcrCandidate,
   interpreted: InterpretedReceipt,
 ): number {
-  const engineScore = Math.min(1, Math.max(0, candidate.engineConfidence / 100));
+  const engineScore = Math.min(
+    1,
+    Math.max(0, candidate.engineConfidence / 100),
+  );
   const interpretationScore = Math.min(1, Math.max(0, interpreted.confidence));
   const itemScore = Math.min(1, interpreted.items.length / 8);
   const reconciliationScore = hasReconciledSubtotal(interpreted) ? 1 : 0;
@@ -44,7 +48,9 @@ export function shouldStopScanning(
     interpreted.confidence >= 0.8 &&
     hasReconciledSubtotal(interpreted) &&
     !interpreted.issues.some((issue) =>
-      ["total-mismatch", "ambiguous-gap", "missing-subtotal"].includes(issue.code),
+      ["total-mismatch", "ambiguous-gap", "missing-subtotal"].includes(
+        issue.code,
+      ),
     )
   );
 }

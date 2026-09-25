@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { InterpretedReceipt } from "./scan-types";
 import { reconcileReceipt } from "./receipt-reconciler";
 
-function receipt(overrides: Partial<InterpretedReceipt> = {}): InterpretedReceipt {
+function receipt(
+  overrides: Partial<InterpretedReceipt> = {},
+): InterpretedReceipt {
   return {
     items: [{ name: "Item terbaca", quantity: 1, unitPrice: 197_000 }],
     subtotal: 214_000,

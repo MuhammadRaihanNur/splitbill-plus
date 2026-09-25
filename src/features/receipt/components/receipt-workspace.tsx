@@ -2,7 +2,7 @@
 
 import { Camera, FileImage, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { inputClass } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast-provider";
@@ -32,16 +32,15 @@ export function ReceiptWorkspace({
   const [items, setItems] = useState<EditableItem[]>([]);
   const [uploadError, setUploadError] = useState("");
 
-  useEffect(() => {
-    if (!scanner.selected) return;
+  function replaceItems(candidateId: string, nextItems: ParsedReceiptItem[]) {
     setItems(
-      scanner.selected.interpreted.items.map((item, index) => ({
+      nextItems.map((item, index) => ({
         ...item,
-        id: `${scanner.selected?.candidate.id}-${index}`,
+        id: `${candidateId}-${index}`,
         selected: true,
       })),
     );
-  }, [scanner.selected]);
+  }
 
   async function choose(next?: File) {
     if (!next) return;
@@ -142,7 +141,8 @@ export function ReceiptWorkspace({
         </p>
         <h1 className="text-3xl font-black">Scan Struk</h1>
         <p className="mt-2 text-[var(--text-secondary)]">
-          Foto diproses di perangkat ini. Atur area, periksa semua harga, lalu lanjutkan.
+          Foto diproses di perangkat ini. Atur area, periksa semua harga, lalu
+          lanjutkan.
         </p>
       </header>
 
@@ -158,7 +158,10 @@ export function ReceiptWorkspace({
                 onChange={(event) => void choose(event.target.files?.[0])}
               />
               <span>
-                <FileImage className="mx-auto text-[var(--brand-500)]" size={30} />
+                <FileImage
+                  className="mx-auto text-[var(--brand-500)]"
+                  size={30}
+                />
                 <strong className="mt-2 block">Pilih foto struk</strong>
                 <small>JPG, PNG, WebP · maks. 10 MB</small>
               </span>
@@ -180,7 +183,10 @@ export function ReceiptWorkspace({
           </div>
 
           {scanner.status === "processing" ? (
-            <ReceiptProgress progress={scanner.progress} onCancel={scanner.cancel} />
+            <ReceiptProgress
+              progress={scanner.progress}
+              onCancel={scanner.cancel}
+            />
           ) : null}
 
           {scanner.previewUrl &&
@@ -197,7 +203,13 @@ export function ReceiptWorkspace({
               onRotate={scanner.setRotation}
               onReset={scanner.resetPolygon}
               onAutoCrop={() => void scanner.redetect()}
-              onConfirm={() => void scanner.scan()}
+              onConfirm={() => {
+                void scanner.scan().then((output) => {
+                  if (output) {
+                    replaceItems(output.best.id, output.interpreted.items);
+                  }
+                });
+              }}
             />
           ) : null}
 
@@ -211,7 +223,10 @@ export function ReceiptWorkspace({
             </button>
           ) : null}
           {error ? (
-            <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-[var(--danger)]">
+            <p
+              role="alert"
+              className="rounded-xl bg-red-50 p-3 text-sm text-[var(--danger)]"
+            >
               {error}
             </p>
           ) : null}
@@ -235,13 +250,24 @@ export function ReceiptWorkspace({
           </div>
 
           {scanner.alternatives.length > 1 ? (
-            <div className="mt-4 flex flex-wrap gap-2" aria-label="Alternatif hasil scan">
+            <div
+              className="mt-4 flex flex-wrap gap-2"
+              aria-label="Alternatif hasil scan"
+            >
               {scanner.alternatives.map((alternative, index) => (
                 <button
                   key={alternative.candidate.id}
                   type="button"
-                  aria-pressed={scanner.selected?.candidate.id === alternative.candidate.id}
-                  onClick={() => scanner.selectCandidate(alternative.candidate.id)}
+                  aria-pressed={
+                    scanner.selected?.candidate.id === alternative.candidate.id
+                  }
+                  onClick={() => {
+                    scanner.selectCandidate(alternative.candidate.id);
+                    replaceItems(
+                      alternative.candidate.id,
+                      alternative.interpreted.items,
+                    );
+                  }}
                   className="min-h-10 rounded-xl border px-3 text-sm font-bold aria-pressed:border-[var(--brand-500)] aria-pressed:bg-[var(--brand-50)] aria-pressed:text-[var(--brand-600)]"
                 >
                   Hasil {index + 1}
@@ -252,11 +278,20 @@ export function ReceiptWorkspace({
 
           {selectedReceipt ? (
             <div className="mt-4 grid gap-2 rounded-2xl bg-[var(--surface-muted)] p-4 sm:grid-cols-3">
-              <Metric label="Subtotal struk" value={formatRupiah(selectedReceipt.subtotal ?? 0)} />
+              <Metric
+                label="Subtotal struk"
+                value={formatRupiah(selectedReceipt.subtotal ?? 0)}
+              />
               <Metric label="Total item" value={formatRupiah(itemTotal)} />
-              <Metric label="Selisih" value={formatRupiah(Math.abs(difference))} />
+              <Metric
+                label="Selisih"
+                value={formatRupiah(Math.abs(difference))}
+              />
               {selectedReceipt.issues.map((issue) => (
-                <p key={`${issue.code}-${issue.message}`} className="text-sm text-[var(--warning)] sm:col-span-3">
+                <p
+                  key={`${issue.code}-${issue.message}`}
+                  className="text-sm text-[var(--warning)] sm:col-span-3"
+                >
                   {issue.message}
                 </p>
               ))}
@@ -277,7 +312,9 @@ export function ReceiptWorkspace({
                     onChange={(event) =>
                       setItems((rows) =>
                         rows.map((row) =>
-                          row.id === item.id ? { ...row, selected: event.target.checked } : row,
+                          row.id === item.id
+                            ? { ...row, selected: event.target.checked }
+                            : row,
                         ),
                       )
                     }
@@ -288,13 +325,16 @@ export function ReceiptWorkspace({
                       className={inputClass}
                       placeholder="Nama item"
                       value={item.name}
-                      onChange={(event) => updateItem(item.id, { name: event.target.value })}
+                      onChange={(event) =>
+                        updateItem(item.id, { name: event.target.value })
+                      }
                     />
                     {item.estimated ? (
                       <small className="mt-1 block font-semibold text-[var(--warning)]">
                         Estimasi — mohon periksa
                       </small>
-                    ) : item.confidence !== undefined && item.confidence < 0.6 ? (
+                    ) : item.confidence !== undefined &&
+                      item.confidence < 0.6 ? (
                       <small className="mt-1 block font-semibold text-[var(--warning)]">
                         Keyakinan rendah — mohon periksa
                       </small>
@@ -306,7 +346,11 @@ export function ReceiptWorkspace({
                     type="number"
                     min="1"
                     value={item.quantity}
-                    onChange={(event) => updateItem(item.id, { quantity: Number(event.target.value) })}
+                    onChange={(event) =>
+                      updateItem(item.id, {
+                        quantity: Number(event.target.value),
+                      })
+                    }
                   />
                   <input
                     aria-label={`Harga ${item.name || "item"}`}
@@ -315,14 +359,20 @@ export function ReceiptWorkspace({
                     value={item.unitPrice || ""}
                     onChange={(event) =>
                       updateItem(item.id, {
-                        unitPrice: Number(event.target.value.replace(/\D/g, "")),
+                        unitPrice: Number(
+                          event.target.value.replace(/\D/g, ""),
+                        ),
                       })
                     }
                   />
                   <button
                     aria-label={`Hapus ${item.name || "item"}`}
                     type="button"
-                    onClick={() => setItems((rows) => rows.filter((row) => row.id !== item.id))}
+                    onClick={() =>
+                      setItems((rows) =>
+                        rows.filter((row) => row.id !== item.id),
+                      )
+                    }
                   >
                     <Trash2 size={18} />
                   </button>

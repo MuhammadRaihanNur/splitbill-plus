@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { InterpretedReceipt, OcrCandidate, RightAngle } from "./scan-types";
+import type {
+  InterpretedReceipt,
+  OcrCandidate,
+  RightAngle,
+} from "./scan-types";
 import { orientationOrder, runAdaptiveOcr } from "./ocr-orchestrator";
 
 const source = { width: 800, height: 1200 } as CanvasImageSource & {
@@ -8,7 +12,10 @@ const source = { width: 800, height: 1200 } as CanvasImageSource & {
   height: number;
 };
 
-function resultFor(candidate: OcrCandidate, exact: boolean): InterpretedReceipt {
+function resultFor(
+  candidate: OcrCandidate,
+  exact: boolean,
+): InterpretedReceipt {
   return {
     items: [
       { name: "Nasi", quantity: 1, unitPrice: exact ? 214_000 : 197_000 },
@@ -29,15 +36,17 @@ describe("adaptive OCR orchestration", () => {
   });
 
   it("stops after the first exact high-confidence pass", async () => {
-    const recognize = vi.fn(async (_image, pass: { orientation: RightAngle }) => ({
-      id: `pass-${pass.orientation}`,
-      rawText: "Nasi 214.000\nSubtotal 214.000",
-      lines: [],
-      engineConfidence: 95,
-      orientation: pass.orientation,
-      preprocessing: "grayscale" as const,
-      durationMs: 20,
-    }));
+    const recognize = vi.fn(
+      async (_image, pass: { orientation: RightAngle }) => ({
+        id: `pass-${pass.orientation}`,
+        rawText: "Nasi 214.000\nSubtotal 214.000",
+        lines: [],
+        engineConfidence: 95,
+        orientation: pass.orientation,
+        preprocessing: "grayscale" as const,
+        durationMs: 20,
+      }),
+    );
     const terminate = vi.fn(async () => undefined);
 
     const output = await runAdaptiveOcr(
@@ -60,25 +69,29 @@ describe("adaptive OCR orchestration", () => {
 
   it("continues to the next orientation after a subtotal mismatch", async () => {
     const orientations: RightAngle[] = [];
-    const recognize = vi.fn(async (_image, pass: { orientation: RightAngle }) => {
-      orientations.push(pass.orientation);
-      return {
-        id: `pass-${pass.orientation}`,
-        rawText: String(pass.orientation),
-        lines: [],
-        engineConfidence: pass.orientation === 90 || pass.orientation === 0 ? 95 : 78,
-        orientation: pass.orientation,
-        preprocessing: "grayscale" as const,
-        durationMs: 20,
-      };
-    });
+    const recognize = vi.fn(
+      async (_image, pass: { orientation: RightAngle }) => {
+        orientations.push(pass.orientation);
+        return {
+          id: `pass-${pass.orientation}`,
+          rawText: String(pass.orientation),
+          lines: [],
+          engineConfidence:
+            pass.orientation === 90 || pass.orientation === 0 ? 95 : 78,
+          orientation: pass.orientation,
+          preprocessing: "grayscale" as const,
+          durationMs: 20,
+        };
+      },
+    );
 
     await runAdaptiveOcr(
       {
         source,
         preferredOrientation: 90,
         lowMemory: true,
-        interpret: (candidate) => resultFor(candidate, candidate.orientation === 0),
+        interpret: (candidate) =>
+          resultFor(candidate, candidate.orientation === 0),
       },
       {
         signal: new AbortController().signal,
@@ -95,9 +108,7 @@ describe("adaptive OCR orchestration", () => {
 
   it("cancels an active recognizer, terminates it, and starts no later pass", async () => {
     const controller = new AbortController();
-    const recognize = vi.fn(
-      () => new Promise<OcrCandidate>(() => undefined),
-    );
+    const recognize = vi.fn(() => new Promise<OcrCandidate>(() => undefined));
     const terminate = vi.fn(async () => undefined);
     const scan = runAdaptiveOcr(
       {
@@ -120,7 +131,8 @@ describe("adaptive OCR orchestration", () => {
   });
 
   it("uses at most two preprocessing modes per orientation on low memory", async () => {
-    const passes: Array<{ orientation: RightAngle; preprocessing: string }> = [];
+    const passes: Array<{ orientation: RightAngle; preprocessing: string }> =
+      [];
     await runAdaptiveOcr(
       {
         source,
@@ -149,7 +161,9 @@ describe("adaptive OCR orchestration", () => {
     );
 
     for (const orientation of [0, 90, 180, 270] as const) {
-      expect(passes.filter((pass) => pass.orientation === orientation)).toHaveLength(2);
+      expect(
+        passes.filter((pass) => pass.orientation === orientation),
+      ).toHaveLength(2);
     }
   });
 });

@@ -54,9 +54,9 @@ describe("OCR candidate scoring", () => {
     expect(scoreCandidate(candidate("exact", 94), exact)).toBeGreaterThan(
       scoreCandidate(candidate("mismatch", 82), mismatch),
     );
-    expect(shouldStopScanning(scoreCandidate(candidate("exact", 94), exact), exact)).toBe(
-      true,
-    );
+    expect(
+      shouldStopScanning(scoreCandidate(candidate("exact", 94), exact), exact),
+    ).toBe(true);
     expect(
       shouldStopScanning(
         scoreCandidate(candidate("mismatch", 82), mismatch),

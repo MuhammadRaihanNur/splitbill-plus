@@ -8,7 +8,9 @@ function abortError(): DOMException {
   return new DOMException("Pemindaian struk dibatalkan.", "AbortError");
 }
 
-function extractLines(data: Awaited<ReturnType<Worker["recognize"]>>["data"]): OcrLine[] {
+function extractLines(
+  data: Awaited<ReturnType<Worker["recognize"]>>["data"],
+): OcrLine[] {
   return (data.blocks ?? []).flatMap((block) =>
     block.paragraphs.flatMap((paragraph) =>
       paragraph.lines.flatMap((line) =>

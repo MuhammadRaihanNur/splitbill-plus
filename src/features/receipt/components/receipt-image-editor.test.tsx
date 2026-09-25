@@ -58,10 +58,18 @@ describe("ReceiptImageEditor", () => {
       />,
     );
 
-    expect(screen.getByRole("slider", { name: "Sudut kiri atas" })).toBeVisible();
-    expect(screen.getByRole("slider", { name: "Sudut kanan atas" })).toBeVisible();
-    expect(screen.getByRole("slider", { name: "Sudut kanan bawah" })).toBeVisible();
-    expect(screen.getByRole("slider", { name: "Sudut kiri bawah" })).toBeVisible();
+    expect(
+      screen.getByRole("slider", { name: "Sudut kiri atas" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("slider", { name: "Sudut kanan atas" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("slider", { name: "Sudut kanan bawah" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("slider", { name: "Sudut kiri bawah" }),
+    ).toBeVisible();
 
     fireEvent.keyDown(screen.getByRole("slider", { name: "Sudut kiri atas" }), {
       key: "ArrowLeft",

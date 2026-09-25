@@ -1,6 +1,13 @@
 "use client";
 
-import { Crop, Maximize, RotateCcw, RotateCw, ScanLine, Undo2 } from "lucide-react";
+import {
+  Crop,
+  Maximize,
+  RotateCcw,
+  RotateCw,
+  ScanLine,
+  Undo2,
+} from "lucide-react";
 import Image from "next/image";
 import { useRef, useState } from "react";
 
@@ -51,7 +58,12 @@ export function ReceiptImageEditor({
 }: ReceiptImageEditorProps) {
   const overlay = useRef<SVGSVGElement>(null);
   const [activeCorner, setActiveCorner] = useState<Corner>();
-  const corners: Corner[] = ["topLeft", "topRight", "bottomRight", "bottomLeft"];
+  const corners: Corner[] = [
+    "topLeft",
+    "topRight",
+    "bottomRight",
+    "bottomLeft",
+  ];
 
   function updateCorner(corner: Corner, point: Point) {
     onPolygonChange({
@@ -65,7 +77,10 @@ export function ReceiptImageEditor({
     });
   }
 
-  function pointFromPointer(clientX: number, clientY: number): Point | undefined {
+  function pointFromPointer(
+    clientX: number,
+    clientY: number,
+  ): Point | undefined {
     const bounds = overlay.current?.getBoundingClientRect();
     if (!bounds || bounds.width === 0 || bounds.height === 0) return undefined;
     return {
@@ -130,7 +145,9 @@ export function ReceiptImageEditor({
               aria-label={cornerLabels[corner]}
               aria-valuemin={0}
               aria-valuemax={Math.max(imageSize.width, imageSize.height)}
-              aria-valuenow={Math.round((polygon[corner].x + polygon[corner].y) / 2)}
+              aria-valuenow={Math.round(
+                (polygon[corner].x + polygon[corner].y) / 2,
+              )}
               tabIndex={0}
               cx={polygon[corner].x}
               cy={polygon[corner].y}
@@ -152,10 +169,16 @@ export function ReceiptImageEditor({
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <EditorButton label="Putar kiri" onClick={() => onRotate(rotate(rotation, -90))}>
+        <EditorButton
+          label="Putar kiri"
+          onClick={() => onRotate(rotate(rotation, -90))}
+        >
           <RotateCcw size={17} />
         </EditorButton>
-        <EditorButton label="Putar kanan" onClick={() => onRotate(rotate(rotation, 90))}>
+        <EditorButton
+          label="Putar kanan"
+          onClick={() => onRotate(rotate(rotation, 90))}
+        >
           <RotateCw size={17} />
         </EditorButton>
         <EditorButton label="Auto Crop" onClick={() => onAutoCrop?.()}>
@@ -163,7 +186,11 @@ export function ReceiptImageEditor({
         </EditorButton>
         <EditorButton
           label="Full Image"
-          onClick={() => onPolygonChange(createFullImagePolygon(imageSize.width, imageSize.height))}
+          onClick={() =>
+            onPolygonChange(
+              createFullImagePolygon(imageSize.width, imageSize.height),
+            )
+          }
         >
           <Maximize size={17} />
         </EditorButton>

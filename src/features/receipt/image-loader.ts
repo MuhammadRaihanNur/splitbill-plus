@@ -20,7 +20,8 @@ export function calculateWorkingSize(
 ): ImageSize {
   const safeWidth = Math.max(1, Math.round(width));
   const safeHeight = Math.max(1, Math.round(height));
-  const longEdgeLimit = deviceMemory !== undefined && deviceMemory <= 2 ? 2000 : 3000;
+  const longEdgeLimit =
+    deviceMemory !== undefined && deviceMemory <= 2 ? 2000 : 3000;
   const scale = Math.min(1, longEdgeLimit / Math.max(safeWidth, safeHeight));
 
   return {

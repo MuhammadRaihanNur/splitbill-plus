@@ -66,7 +66,9 @@ describe("useReceiptScanner", () => {
         });
       }),
     };
-    const { result, unmount } = renderHook(() => useReceiptScanner(dependencies));
+    const { result, unmount } = renderHook(() =>
+      useReceiptScanner(dependencies),
+    );
 
     await act(async () => {
       await result.current.selectFile(
@@ -76,7 +78,11 @@ describe("useReceiptScanner", () => {
     expect(result.current.status).toBe("editing");
     expect(result.current.previewUrl).toBe("blob:receipt");
 
-    const edited = { ...automatic, topLeft: { x: 30, y: 40 }, source: "manual" as const };
+    const edited = {
+      ...automatic,
+      topLeft: { x: 30, y: 40 },
+      source: "manual" as const,
+    };
     act(() => result.current.setPolygon(edited));
     act(() => void result.current.scan());
     await waitFor(() => expect(result.current.status).toBe("processing"));

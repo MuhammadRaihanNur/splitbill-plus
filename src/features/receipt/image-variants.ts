@@ -38,13 +38,7 @@ export function variantPlan({
 }: VariantPlanInput): PreprocessingMode[] {
   if (!needsMorePasses) return ["grayscale"];
   if (lowMemory) return ["grayscale", "adaptive-threshold"];
-  return [
-    "grayscale",
-    "contrast",
-    "adaptive-threshold",
-    "otsu",
-    "sharpen",
-  ];
+  return ["grayscale", "contrast", "adaptive-threshold", "otsu", "sharpen"];
 }
 
 function thresholdPixels(
@@ -58,14 +52,19 @@ function thresholdPixels(
   let mean = 0;
 
   for (let index = 0; index < pixels.length; index += 4) {
-    mean += pixels[index] * 0.299 + pixels[index + 1] * 0.587 + pixels[index + 2] * 0.114;
+    mean +=
+      pixels[index] * 0.299 +
+      pixels[index + 1] * 0.587 +
+      pixels[index + 2] * 0.114;
   }
   mean /= Math.max(1, pixels.length / 4);
   const threshold = adaptive ? Math.max(110, mean * 0.92) : mean;
 
   for (let index = 0; index < pixels.length; index += 4) {
     const luminance =
-      pixels[index] * 0.299 + pixels[index + 1] * 0.587 + pixels[index + 2] * 0.114;
+      pixels[index] * 0.299 +
+      pixels[index + 1] * 0.587 +
+      pixels[index + 2] * 0.114;
     const value = luminance >= threshold ? 255 : 0;
     pixels[index] = value;
     pixels[index + 1] = value;

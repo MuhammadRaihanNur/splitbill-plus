@@ -131,7 +131,9 @@ describe("ReceiptWorkspace", () => {
     expect(screen.getByDisplayValue("Alternatif Kopi")).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Hasil 1" }));
     await user.click(screen.getByLabelText("Pilih Item 1"));
-    await user.click(screen.getByRole("button", { name: "Lanjut ke Split per Item" }));
+    await user.click(
+      screen.getByRole("button", { name: "Lanjut ke Split per Item" }),
+    );
 
     await waitFor(async () => {
       expect((await draftRepository.get())?.items).toHaveLength(7);

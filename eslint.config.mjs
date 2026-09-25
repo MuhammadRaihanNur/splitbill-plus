@@ -9,6 +9,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "node_modules/**",
     "coverage/**",
+    "public/ocr/runtime/**",
     "next-env.d.ts",
   ]),
 ]);

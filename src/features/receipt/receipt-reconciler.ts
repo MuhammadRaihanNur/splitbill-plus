@@ -21,7 +21,9 @@ function withoutReconciliationIssues(issues: ReceiptIssue[]): ReceiptIssue[] {
   );
 }
 
-export function reconcileReceipt(receipt: InterpretedReceipt): InterpretedReceipt {
+export function reconcileReceipt(
+  receipt: InterpretedReceipt,
+): InterpretedReceipt {
   const issues = withoutReconciliationIssues(receipt.issues);
   if (receipt.subtotal === undefined) return { ...receipt, issues };
   if (!Number.isSafeInteger(receipt.subtotal) || receipt.subtotal < 0) {
@@ -40,7 +42,9 @@ export function reconcileReceipt(receipt: InterpretedReceipt): InterpretedReceip
   if (accountedTotal === receipt.subtotal) return { ...receipt, issues };
 
   const difference = receipt.subtotal - itemTotal;
-  const unresolved = (receipt.unresolvedItems ?? []).map((name) => name.trim()).filter(Boolean);
+  const unresolved = (receipt.unresolvedItems ?? [])
+    .map((name) => name.trim())
+    .filter(Boolean);
   if (
     adjustment === 0 &&
     unresolved.length === 1 &&
@@ -77,7 +81,8 @@ export function reconcileReceipt(receipt: InterpretedReceipt): InterpretedReceip
         ...issues,
         {
           code: "ambiguous-gap",
-          message: "Beberapa nama item belum memiliki harga; selisih tidak dibagi otomatis.",
+          message:
+            "Beberapa nama item belum memiliki harga; selisih tidak dibagi otomatis.",
         },
       ],
     };

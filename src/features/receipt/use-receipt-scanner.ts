@@ -18,11 +18,7 @@ import { createFullImagePolygon } from "./scan-types";
 import type { ReceiptPolygon, RightAngle, ScanProgress } from "./scan-types";
 
 export type ReceiptScannerStatus =
-  | "idle"
-  | "editing"
-  | "processing"
-  | "review"
-  | "failed";
+  "idle" | "editing" | "processing" | "review" | "failed";
 
 export type ScannerSource = CanvasImageSource & {
   width: number;
@@ -54,9 +50,13 @@ export interface ReceiptScannerDependencies {
   ): Promise<AdaptiveOcrResult>;
 }
 
-async function loadBoundedSource(file: File, signal: AbortSignal): Promise<ScannerSource> {
+async function loadBoundedSource(
+  file: File,
+  signal: AbortSignal,
+): Promise<ScannerSource> {
   const bitmap = await loadReceiptImage(file, signal);
-  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  const memory = (navigator as Navigator & { deviceMemory?: number })
+    .deviceMemory;
   const size = calculateWorkingSize(bitmap.width, bitmap.height, memory);
   const canvas = document.createElement("canvas");
   canvas.width = size.width;
@@ -165,7 +165,9 @@ export function useReceiptScanner(
         if (operation !== scanId.current) return;
         if ((cause as Error).name === "AbortError") setStatus("idle");
         else {
-          setError("Gambar tidak dapat disiapkan. Coba foto lain atau format JPG/PNG.");
+          setError(
+            "Gambar tidak dapat disiapkan. Coba foto lain atau format JPG/PNG.",
+          );
           setStatus("failed");
         }
       }
@@ -207,8 +209,10 @@ export function useReceiptScanner(
           source: scanSource,
           preferredOrientation: rotation,
           lowMemory:
-            ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4) <= 2,
-          interpret: (candidate) => reconcileReceipt(interpretReceipt(candidate)),
+            ((navigator as Navigator & { deviceMemory?: number })
+              .deviceMemory ?? 4) <= 2,
+          interpret: (candidate) =>
+            reconcileReceipt(interpretReceipt(candidate)),
         },
         {
           signal: aborter.signal,
@@ -221,10 +225,17 @@ export function useReceiptScanner(
       const nextAlternatives =
         output.alternatives.length > 0
           ? output.alternatives
-          : [{ candidate: output.best, interpreted: output.interpreted, score: 1 }];
+          : [
+              {
+                candidate: output.best,
+                interpreted: output.interpreted,
+                score: 1,
+              },
+            ];
       setAlternatives(nextAlternatives);
       setSelectedCandidateId(output.best.id);
       setStatus("review");
+      return output;
     } catch (cause) {
       if (operation !== scanId.current) return;
       if ((cause as Error).name === "AbortError") setStatus("editing");
@@ -234,6 +245,7 @@ export function useReceiptScanner(
         );
         setStatus("failed");
       }
+      return undefined;
     } finally {
       cleanup();
     }

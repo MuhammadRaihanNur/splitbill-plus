@@ -20,7 +20,9 @@ interface ReceiptProgressProps {
 }
 
 export function ReceiptProgress({ progress, onCancel }: ReceiptProgressProps) {
-  const percentage = Math.round(Math.min(1, Math.max(0, progress.progress)) * 100);
+  const percentage = Math.round(
+    Math.min(1, Math.max(0, progress.progress)) * 100,
+  );
   const elapsedSeconds = Math.round(progress.elapsedMs / 1000);
 
   return (

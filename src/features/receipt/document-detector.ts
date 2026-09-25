@@ -30,7 +30,8 @@ function distance(first: Point, second: Point): number {
 export function orderPolygon(
   points: Point[],
 ): Omit<ReceiptPolygon, "confidence" | "source"> {
-  if (points.length !== 4) throw new Error("Poligon struk harus memiliki 4 titik.");
+  if (points.length !== 4)
+    throw new Error("Poligon struk harus memiliki 4 titik.");
   const byVerticalPosition = [...points].sort((first, second) =>
     first.y === second.y ? first.x - second.x : first.y - second.y,
   );
@@ -48,7 +49,8 @@ export function scoreReceiptPolygon(
   points: Point[],
   imageSize: { width: number; height: number },
 ): number {
-  if (points.length !== 4 || imageSize.width <= 0 || imageSize.height <= 0) return 0;
+  if (points.length !== 4 || imageSize.width <= 0 || imageSize.height <= 0)
+    return 0;
   const ordered = orderPolygon(points);
   const corners = [
     ordered.topLeft,
@@ -74,7 +76,10 @@ export function scoreReceiptPolygon(
     (centerY - imageSize.height / 2) / imageSize.height,
   );
   const centerScore = Math.max(0, 1 - offset * 2);
-  return Math.min(1, coverageScore * 0.6 + receiptShapeScore * 0.25 + centerScore * 0.15);
+  return Math.min(
+    1,
+    coverageScore * 0.6 + receiptShapeScore * 0.25 + centerScore * 0.15,
+  );
 }
 
 function pointsFromApproximation(approximation: Mat): Point[] {
@@ -136,22 +141,22 @@ export async function detectReceiptPolygon(
     );
     throwIfAborted(signal);
 
-    let best:
-      | { points: Point[]; confidence: number }
-      | undefined;
+    let best: { points: Point[]; confidence: number } | undefined;
     for (let index = 0; index < contours.size(); index += 1) {
       const contour = contours.get(index);
       const approximation = new cv.Mat();
       try {
         const perimeter = cv.arcLength(contour, true);
         cv.approxPolyDP(contour, approximation, perimeter * 0.02, true);
-        if (approximation.rows !== 4 || !cv.isContourConvex(approximation)) continue;
+        if (approximation.rows !== 4 || !cv.isContourConvex(approximation))
+          continue;
         const points = pointsFromApproximation(approximation);
         const confidence = scoreReceiptPolygon(points, {
           width: input.cols,
           height: input.rows,
         });
-        if (!best || confidence > best.confidence) best = { points, confidence };
+        if (!best || confidence > best.confidence)
+          best = { points, confidence };
       } finally {
         approximation.delete();
         contour.delete();

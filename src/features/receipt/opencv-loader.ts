@@ -17,7 +17,8 @@ async function initializeOpenCv(): Promise<CV> {
     const namespace = imported as unknown as {
       default?: InitializingCv | Promise<InitializingCv>;
     };
-    const candidate = namespace.default ?? (imported as unknown as InitializingCv);
+    const candidate =
+      namespace.default ?? (imported as unknown as InitializingCv);
     const cv = await candidate;
 
     if (cv.Mat) return cv;
