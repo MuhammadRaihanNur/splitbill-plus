@@ -3,6 +3,8 @@ export interface ParsedReceiptItem {
   quantity: number;
   unitPrice: number;
   estimated?: boolean;
+  confidence?: number;
+  source?: "ocr" | "estimated" | "manual";
 }
 export interface OcrCallbacks {
   onProgress: (value: number) => void;

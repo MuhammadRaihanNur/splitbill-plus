@@ -13,6 +13,9 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@techstark/opencv-js": "^5.0.0-release.1",
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@tesseract.js-data/ind": "^1.0.0",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
     "lucide-react": "^0.468.0",
