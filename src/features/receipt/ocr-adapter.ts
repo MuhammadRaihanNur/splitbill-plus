@@ -11,11 +11,13 @@ function abortError(): DOMException {
 function extractLines(data: Awaited<ReturnType<Worker["recognize"]>>["data"]): OcrLine[] {
   return (data.blocks ?? []).flatMap((block) =>
     block.paragraphs.flatMap((paragraph) =>
-      paragraph.lines.map((line) => ({
-        text: line.text.trim(),
-        confidence: Math.min(1, Math.max(0, line.confidence / 100)),
-        bbox: line.bbox,
-      })),
+      paragraph.lines.flatMap((line) =>
+        line.words.map((word) => ({
+          text: word.text.trim(),
+          confidence: Math.min(1, Math.max(0, word.confidence / 100)),
+          bbox: word.bbox,
+        })),
+      ),
     ),
   );
 }

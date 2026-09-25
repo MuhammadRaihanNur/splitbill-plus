@@ -1,4 +1,5 @@
 import type { ParsedReceiptItem } from "@/features/receipt/types";
+import { normalizeMoneyToken } from "@/features/receipt/money-normalizer";
 
 const ignoredName =
   /^(?:sub\s*total|grand\s+total|total|qris|tunai|cash|pajak|tax|service|payment|pembayaran|kasir|penjualan|instagram|contact|transfer|powered)\b/i;
@@ -21,7 +22,7 @@ function normalizeNumberSpacing(line: string): string {
 }
 
 function parseMoney(value: string): number {
-  return Number(value.replace(/\D/g, ""));
+  return normalizeMoneyToken(value, true) ?? Number(value.replace(/\D/g, ""));
 }
 
 function cleanNameLine(line: string): string {
