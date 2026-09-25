@@ -7,6 +7,7 @@
 
 # test output
 /coverage
+*.tsbuildinfo
 
 # local deployment metadata
 /.vercel
