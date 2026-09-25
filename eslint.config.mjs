@@ -7,6 +7,7 @@ const eslintConfig = defineConfig([
   ...nextTypeScript,
   globalIgnores([
     ".next/**",
+    ".worktrees/**",
     "node_modules/**",
     "coverage/**",
     "public/ocr/runtime/**",
