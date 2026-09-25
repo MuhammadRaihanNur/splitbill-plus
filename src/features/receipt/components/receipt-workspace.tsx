@@ -21,6 +21,26 @@ import { ReceiptProgress } from "./receipt-progress";
 
 type EditableItem = ParsedReceiptItem & { id: string; selected: boolean };
 
+function safePositiveInteger(value: string): number {
+  const parsed = Number(value.replace(/\D/g, ""));
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function safeItemTotal(items: EditableItem[]): number {
+  let total = 0;
+  for (const item of items) {
+    const lineTotal = item.quantity * item.unitPrice;
+    if (
+      !Number.isSafeInteger(lineTotal) ||
+      !Number.isSafeInteger(total + lineTotal)
+    ) {
+      return 0;
+    }
+    total += lineTotal;
+  }
+  return total;
+}
+
 export function ReceiptWorkspace({
   scannerDependencies,
 }: {
@@ -92,10 +112,16 @@ export function ReceiptWorkspace({
         Number.isSafeInteger(item.quantity) &&
         item.quantity > 0 &&
         Number.isSafeInteger(item.unitPrice) &&
-        item.unitPrice > 0,
+        item.unitPrice > 0 &&
+        Number.isSafeInteger(item.quantity * item.unitPrice),
     );
     if (!chosen.length) {
       toast.error("Pilih minimal satu item valid");
+      return;
+    }
+    const chosenTotal = safeItemTotal(chosen);
+    if (chosenTotal <= 0) {
+      toast.error("Total item terlalu besar atau tidak valid");
       return;
     }
     const settings = await settingsRepository.get();
@@ -103,10 +129,7 @@ export function ReceiptWorkspace({
       id: "active-split",
       title: scanner.fileName.replace(/\.[^.]+$/, "") || "Hasil scan struk",
       mode: "item",
-      subtotal: chosen.reduce(
-        (sum, item) => sum + item.unitPrice * item.quantity,
-        0,
-      ),
+      subtotal: chosenTotal,
       taxBasisPoints: settings.defaultTaxBasisPoints,
       serviceBasisPoints: settings.defaultServiceBasisPoints,
       tip: 0,
@@ -126,10 +149,7 @@ export function ReceiptWorkspace({
   }
 
   const selectedReceipt = scanner.selected?.interpreted;
-  const itemTotal = items.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0,
-  );
+  const itemTotal = safeItemTotal(items);
   const difference = (selectedReceipt?.subtotal ?? itemTotal) - itemTotal;
   const error = uploadError || scanner.error;
 
@@ -348,7 +368,7 @@ export function ReceiptWorkspace({
                     value={item.quantity}
                     onChange={(event) =>
                       updateItem(item.id, {
-                        quantity: Number(event.target.value),
+                        quantity: safePositiveInteger(event.target.value),
                       })
                     }
                   />
@@ -359,9 +379,7 @@ export function ReceiptWorkspace({
                     value={item.unitPrice || ""}
                     onChange={(event) =>
                       updateItem(item.id, {
-                        unitPrice: Number(
-                          event.target.value.replace(/\D/g, ""),
-                        ),
+                        unitPrice: safePositiveInteger(event.target.value),
                       })
                     }
                   />

@@ -8,7 +8,6 @@ import {
   ScanLine,
   Undo2,
 } from "lucide-react";
-import Image from "next/image";
 import { useRef, useState } from "react";
 
 import { createFullImagePolygon } from "../scan-types";
@@ -42,6 +41,17 @@ function clamp(value: number, maximum: number): number {
 
 function rotate(rotation: RightAngle, delta: 90 | -90): RightAngle {
   return ((rotation + delta + 360) % 360) as RightAngle;
+}
+
+function rotationTransform(
+  rotation: RightAngle,
+  width: number,
+  height: number,
+): string {
+  if (rotation === 90) return `matrix(0 1 -1 0 ${height} 0)`;
+  if (rotation === 180) return `matrix(-1 0 0 -1 ${width} ${height})`;
+  if (rotation === 270) return `matrix(0 -1 1 0 0 ${width})`;
+  return "matrix(1 0 0 1 0 0)";
 }
 
 export function ReceiptImageEditor({
@@ -83,10 +93,18 @@ export function ReceiptImageEditor({
   ): Point | undefined {
     const bounds = overlay.current?.getBoundingClientRect();
     if (!bounds || bounds.width === 0 || bounds.height === 0) return undefined;
-    return {
-      x: ((clientX - bounds.left) / bounds.width) * imageSize.width,
-      y: ((clientY - bounds.top) / bounds.height) * imageSize.height,
-    };
+    const displayWidth =
+      rotation === 90 || rotation === 270 ? imageSize.height : imageSize.width;
+    const displayHeight =
+      rotation === 90 || rotation === 270 ? imageSize.width : imageSize.height;
+    const displayX = ((clientX - bounds.left) / bounds.width) * displayWidth;
+    const displayY = ((clientY - bounds.top) / bounds.height) * displayHeight;
+    if (rotation === 90) return { x: displayY, y: imageSize.height - displayX };
+    if (rotation === 180) {
+      return { x: imageSize.width - displayX, y: imageSize.height - displayY };
+    }
+    if (rotation === 270) return { x: imageSize.width - displayY, y: displayX };
+    return { x: displayX, y: displayY };
   }
 
   function moveWithKeyboard(corner: Corner, key: string) {
@@ -107,23 +125,21 @@ export function ReceiptImageEditor({
   const polygonPoints = corners
     .map((corner) => `${polygon[corner].x},${polygon[corner].y}`)
     .join(" ");
+  const displayWidth =
+    rotation === 90 || rotation === 270 ? imageSize.height : imageSize.width;
+  const displayHeight =
+    rotation === 90 || rotation === 270 ? imageSize.width : imageSize.height;
 
   return (
     <div className="space-y-4">
-      <div className="relative overflow-hidden rounded-2xl bg-slate-950">
-        <Image
-          src={previewUrl}
-          alt="Pratinjau area struk"
-          width={imageSize.width}
-          height={imageSize.height}
-          unoptimized
-          className="max-h-[32rem] w-full object-contain"
-          style={{ transform: `rotate(${rotation}deg)` }}
-        />
+      <div className="grid place-items-center overflow-hidden rounded-2xl bg-slate-950">
         <svg
           ref={overlay}
-          viewBox={`0 0 ${imageSize.width} ${imageSize.height}`}
-          className="absolute inset-0 h-full w-full touch-none"
+          viewBox={`0 0 ${displayWidth} ${displayHeight}`}
+          width={displayWidth}
+          height={displayHeight}
+          aria-label="Pratinjau area struk"
+          className="block max-h-[32rem] max-w-full touch-none"
           onPointerMove={(event) => {
             if (!activeCorner) return;
             const point = pointFromPointer(event.clientX, event.clientY);
@@ -132,39 +148,53 @@ export function ReceiptImageEditor({
           onPointerUp={() => setActiveCorner(undefined)}
           onPointerCancel={() => setActiveCorner(undefined)}
         >
-          <polygon
-            points={polygonPoints}
-            fill="rgba(37, 99, 235, .16)"
-            stroke="var(--brand-500)"
-            strokeWidth={Math.max(4, imageSize.width / 220)}
-          />
-          {corners.map((corner) => (
-            <circle
-              key={corner}
-              role="slider"
-              aria-label={cornerLabels[corner]}
-              aria-valuemin={0}
-              aria-valuemax={Math.max(imageSize.width, imageSize.height)}
-              aria-valuenow={Math.round(
-                (polygon[corner].x + polygon[corner].y) / 2,
-              )}
-              tabIndex={0}
-              cx={polygon[corner].x}
-              cy={polygon[corner].y}
-              r={Math.max(18, imageSize.width / 45)}
-              fill="white"
-              stroke="var(--brand-500)"
-              strokeWidth={Math.max(5, imageSize.width / 180)}
-              onPointerDown={(event) => {
-                event.currentTarget.setPointerCapture(event.pointerId);
-                setActiveCorner(corner);
-              }}
-              onKeyDown={(event) => {
-                if (event.key.startsWith("Arrow")) event.preventDefault();
-                moveWithKeyboard(corner, event.key);
-              }}
+          <g
+            transform={rotationTransform(
+              rotation,
+              imageSize.width,
+              imageSize.height,
+            )}
+          >
+            <image
+              href={previewUrl}
+              width={imageSize.width}
+              height={imageSize.height}
+              preserveAspectRatio="none"
             />
-          ))}
+            <polygon
+              points={polygonPoints}
+              fill="rgba(37, 99, 235, .16)"
+              stroke="var(--brand-500)"
+              strokeWidth={Math.max(4, imageSize.width / 220)}
+            />
+            {corners.map((corner) => (
+              <circle
+                key={corner}
+                role="slider"
+                aria-label={cornerLabels[corner]}
+                aria-valuemin={0}
+                aria-valuemax={Math.max(imageSize.width, imageSize.height)}
+                aria-valuenow={Math.round(
+                  (polygon[corner].x + polygon[corner].y) / 2,
+                )}
+                tabIndex={0}
+                cx={polygon[corner].x}
+                cy={polygon[corner].y}
+                r={Math.max(18, imageSize.width / 45)}
+                fill="white"
+                stroke="var(--brand-500)"
+                strokeWidth={Math.max(5, imageSize.width / 180)}
+                onPointerDown={(event) => {
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  setActiveCorner(corner);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key.startsWith("Arrow")) event.preventDefault();
+                  moveWithKeyboard(corner, event.key);
+                }}
+              />
+            ))}
+          </g>
         </svg>
       </div>
 
